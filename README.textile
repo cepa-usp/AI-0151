@@ -1,0 +1,4 @@
+h1. Níveis tróficos (Pantanal)
+
+Esta Atividade Interativa (AI) é composta por dois passos: no primeiro o usuário deve posicionar corretamente os seres vivos nas caixas disponíveis, conforme sua relação de predação com os demais. No segundo passo ele deve arrastar essas caixas, organizando-as em níveis tróficos.
+

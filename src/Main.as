@@ -52,9 +52,6 @@
 			verificaFinaliza();
 			
 			criaConexoes();
-			
-			salva.addEventListener(MouseEvent.CLICK, saveStatus);
-			restaura.addEventListener(MouseEvent.CLICK, recoverStatus);
 		}
 		
 		private var status:Object;

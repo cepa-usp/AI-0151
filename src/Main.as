@@ -178,15 +178,18 @@
 			var posB:Point = new Point(posBFixo.x * Math.cos(angle) - posBFixo.y * Math.sin(angle), posBFixo.x * Math.sin(angle) + posBFixo.y * Math.cos(angle));
 			
 			var posIni:Point = new Point(xIni + Math.cos(angle) * raioPeca, yIni + Math.sin(angle) * raioPeca);
-			var posEnd:Point = new Point(xEnd + Math.cos(angle + Math.PI) * raioPeca, yEnd + Math.sin(angle + Math.PI) * raioPeca);
+			var posEnd:Point = new Point(xEnd + Math.cos(angle + Math.PI) * (raioPeca + 4), yEnd + Math.sin(angle + Math.PI) * (raioPeca + 4));
+			var posEnd2:Point = new Point(xEnd + Math.cos(angle + Math.PI) * raioPeca, yEnd + Math.sin(angle + Math.PI) * raioPeca);
 			
 			conncetionsSpr.graphics.beginFill(color);
 			conncetionsSpr.graphics.lineStyle(2, color);
 			conncetionsSpr.graphics.moveTo(posIni.x, posIni.y);
 			conncetionsSpr.graphics.lineTo(posEnd.x, posEnd.y);
-			conncetionsSpr.graphics.lineTo(posEnd.x + posB.x, posEnd.y + posB.y);
-			conncetionsSpr.graphics.lineTo(posEnd.x + posA.x, posEnd.y + posA.y);
-			conncetionsSpr.graphics.lineTo(posEnd.x, posEnd.y);
+			conncetionsSpr.graphics.lineStyle(1, color);
+			conncetionsSpr.graphics.moveTo(posEnd2.x, posEnd2.y);
+			conncetionsSpr.graphics.lineTo(posEnd2.x + posB.x, posEnd2.y + posB.y);
+			conncetionsSpr.graphics.lineTo(posEnd2.x + posA.x, posEnd2.y + posA.y);
+			conncetionsSpr.graphics.lineTo(posEnd2.x, posEnd2.y);
 			conncetionsSpr.graphics.endFill();
 		}
 		

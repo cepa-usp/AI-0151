@@ -39,7 +39,7 @@ package
 		
 		private function initArraste(e:MouseEvent):void 
 		{
-			dispatchEvent(new Event(Event.ACTIVATE, true));
+			dispatchEvent(new Event("inicioArraste", true));
 			stage.addEventListener(MouseEvent.MOUSE_UP, stopArraste);
 			this.parent.addChild(ghost);
 			ghost.x = this.x;
@@ -67,7 +67,7 @@ package
 			else ghost.stopDrag();
 			setPosition(ghost.x, ghost.y);
 			this.parent.removeChild(ghost);
-			dispatchEvent(new Event(Event.CHANGE, true));
+			dispatchEvent(new Event("fimArraste", true));
 		}
 		
 		public function get position():Point

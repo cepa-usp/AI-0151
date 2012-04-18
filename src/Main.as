@@ -1,6 +1,7 @@
 ﻿package 
 {
 	import cepa.utils.ToolTip;
+	import com.adobe.serialization.json.JSON;
 	import fl.transitions.easing.None;
 	import fl.transitions.Tween;
 	import flash.display.DisplayObject;
@@ -8,11 +9,16 @@
 	import flash.display.Sprite;
 	import flash.events.Event;
 	import flash.events.MouseEvent;
+	import flash.events.TimerEvent;
+	import flash.external.ExternalInterface;
 	import flash.filters.GlowFilter;
 	import flash.geom.Point;
 	import flash.geom.Rectangle;
 	import flash.utils.getDefinitionByName;
 	import flash.utils.getQualifiedClassName;
+	import flash.utils.setTimeout;
+	import flash.utils.Timer;
+	import pipwerks.SCORM;
 	
 	/**
 	 * ...
@@ -28,8 +34,9 @@
 		
 		private var tweenTime:Number = 0.2;
 		private var conncetionsSpr:Sprite;
-		private var state:String = "Parte 1";
-		
+		private var state:String = "Parte 1:";
+		private var maxTentativas:int = 3;
+		private var tentativaAtual:int = 1;
 		
 		
 		public function Main() 
@@ -44,22 +51,31 @@
 			this.scrollRect = new Rectangle(0, 0, 700, 600);
 			
 			fundoSegundaParte.visible = false;
+			entrada.tentativas.text = String(tentativaAtual) + "/" + String(maxTentativas);
 			
 			adicionaListeners();
 			addListeners();
 			
 			createAnswer();
-			verificaFinaliza();
 			
+			if (ExternalInterface.available) {
+				initLMSConnection();
+				if (mementoSerialized != null) {
+					if(mementoSerialized != "" && mementoSerialized != "null") recoverStatus(mementoSerialized);
+				}
+			}
+			
+			verificaFinaliza();
 			criaConexoes();
+			stage.addEventListener(MouseEvent.MOUSE_DOWN, initDragFundo);
 		}
 		
-		private var status:Object;
-		private function saveStatus(e:MouseEvent = null):void
+		private function saveStatusForRecovery(e:MouseEvent = null):void
 		{
-			status = new Object();
+			var status:Object = new Object();
 			
 			status.fase = state;
+			status.tentativas = tentativaAtual;
 			status.pecas = new Object();
 			status.fundos = new Object();
 			
@@ -70,21 +86,24 @@
 					status.pecas[child.name] = new Object();
 					status.pecas[child.name].x = child.x;
 					status.pecas[child.name].y = child.y;
+					status.pecas[child.name].frame = Peca(child).bkg.currentFrame;
 					if (Peca(child).currentFundo != null) status.pecas[child.name].currentFundo = Peca(child).currentFundo.name;
 					else status.pecas[child.name].currentFundo = "null";
 				}else if (child is Fundo) {
 					status.fundos[child.name] = new Object();
 					status.fundos[child.name].x = child.x;
 					status.fundos[child.name].y = child.y;
-					//if (Fundo(child).currentPeca != null) status.fundos[child.name].currentPeca = Fundo(child).currentPeca.name;
-					//else status.fundos[child.name].currentPeca = "null";
 					status.fundos[child.name].disponivel = Fundo(child).disponivel;
 				}
 			}
+			
+			mementoSerialized = JSON.encode(status);
 		}
 		
-		private function recoverStatus(e:MouseEvent = null):void
+		private function recoverStatus(memento:String):void
 		{
+			var status:Object = JSON.decode(memento);
+			
 			state = status.fase;
 			parte.text = state;
 			
@@ -92,6 +111,7 @@
 			{
 				var child:DisplayObject = getChildAt(i);
 				if (child is Peca) {
+					Peca(child).bkg.gotoAndStop(status.pecas[child.name].frame);
 					child.x = status.pecas[child.name].x;
 					child.y = status.pecas[child.name].y;
 					if (status.pecas[child.name].currentFundo != "null") {
@@ -100,15 +120,17 @@
 					}
 				}else if (child is Fundo) {
 					Fundo(child).setPosition(status.fundos[child.name].x, status.fundos[child.name].y);
-					//if (status.fundos[child.name].currentPeca != "null") Fundo(child).currentPeca = this[status.fundos[child.name].currentPeca];
 					Fundo(child).disponivel = status.fundos[child.name].disponivel;
 				}
 			}
 			
-			if (state == "Parte 2") {
+			if (state == "Parte 2:") {
 				iniciaSegundaParte();
 				criaConexoes();
 			}
+			
+			tentativaAtual = status.tentativas;
+			entrada.tentativas.text = String(tentativaAtual) + "/" + String(maxTentativas);
 		}
 		
 		private var connections:Array = [
@@ -238,14 +260,6 @@
 		}
 		
 		/**
-		 * Inicia o tutorial da atividade.
-		 */
-		public function iniciaTutorial(e:MouseEvent = null):void 
-		{
-			
-		}
-		
-		/**
 		 * Abrea a tela de orientações.
 		 */
 		private function openOrientacoes(e:MouseEvent):void 
@@ -270,42 +284,47 @@
 		 */
 		public function reset(e:MouseEvent = null):void 
 		{
-			state = "Parte 1";
-			parte.text = state;
 			fundoDragging = null;
 			pecaDragging = null;
 			
-			for (var i:int = 0; i < numChildren; i++)
-			{
-				var child:DisplayObject = getChildAt(i);
-				if (child is Peca) {
-					child.x = Peca(child).inicialPosition.x;
-					child.y = Peca(child).inicialPosition.y;
-					Peca(child).currentFundo = null;
-					
-				}else if (child is Fundo) {
-					Fundo(child).setPosition(Fundo(child).inicialPos.x, Fundo(child).inicialPos.y);
-					Fundo(child).disponivel = true;
-					Fundo(child).currentPeca = null;
+			if(state == "Parte 1:"){
+				for (var i:int = 0; i < numChildren; i++)
+				{
+					var child:DisplayObject = getChildAt(i);
+					if (child is Peca) {
+						child.x = Peca(child).inicialPosition.x;
+						child.y = Peca(child).inicialPosition.y;
+						if (Peca(child).currentFundo != null) {
+							Fundo(Peca(child).currentFundo).currentPeca = null;
+						}
+						Peca(child).currentFundo = null;
+						Peca(child).bkg.gotoAndStop(WAITING);
+						
+						var fundoPeca:Fundo = getFundo(new Point(child.x, child.y));
+						if (fundoPeca != null) {
+							Peca(child).currentFundo = fundoPeca;
+							fundoPeca.currentPeca = Peca(child);
+							Peca(child).mouseEnabled = false;
+							fundoPeca.disponivel = false;
+							Peca(child).bkg.gotoAndStop(STATIC);
+						}
+					}
 				}
-			}
-			
-			for (i = 0; i < numChildren; i++)
-			{
-				child = getChildAt(i);
-				if (child is Peca) {
-					var fundoPeca:Fundo = getFundo(new Point(child.x, child.y));
-					if (fundoPeca != null) {
-						Peca(child).currentFundo = fundoPeca;
-						fundoPeca.currentPeca = Peca(child);
-						Peca(child).mouseEnabled = false;
-						fundoPeca.disponivel = false;
+			}else {
+				for (i = 0; i < numChildren; i++)
+				{
+					child = getChildAt(i);
+					if (child is Fundo) {
+						Fundo(child).setPosition(Fundo(child).inicialPos.x, Fundo(child).inicialPos.y);
+						Fundo(child).currentPeca.x = child.x;
+						Fundo(child).currentPeca.y = child.y;
 					}
 				}
 			}
 			
-			criaConexoes();
 			verificaFinaliza();
+			criaConexoes();
+			saveStatus();
 		}
 		
 		private function addListeners():void 
@@ -316,79 +335,135 @@
 		
 		private function finalizaExec(e:MouseEvent):void 
 		{
-			if(state == "Parte 1"){
-				var nCertas:int = 0;
-				var nPecas:int = 0;
-				
-				for (var i:int = 0; i < numChildren; i++) 
-				{
-					var child:DisplayObject = getChildAt(i);
-					if (child is Peca) {
-						if(Fundo(Peca(child).currentFundo).disponivel){
-							nPecas++;
-							if(Peca(child).fundo.indexOf(Peca(child).currentFundo) != -1){
-								nCertas++;
+			if(tentativaAtual <= maxTentativas){
+				if (state == "Parte 1:") {
+					var nCertas:int = 0;
+					var nPecas:int = 0;
+					
+					for (var i:int = 0; i < numChildren; i++) 
+					{
+						var child:DisplayObject = getChildAt(i);
+						if (child is Peca) {
+							if(Fundo(Peca(child).currentFundo).disponivel){
+								nPecas++;
+								if(Peca(child).fundo.indexOf(Peca(child).currentFundo) != -1){
+									nCertas++;
+								}
 							}
 						}
 					}
-				}
-				
-				var currentScore:int = int((nCertas / nPecas) * 100);
-				iniciaSegundaParte();
-				
-				if (currentScore < 99) {
-					//feedbackScreen.setText("Releia a questão e avalie a sequência escolhida.");
-				}
-				else {
-					//feedbackScreen.setText("Parabéns!\nA sequência está correta!");
+					
+					var currentScore:int = int((nCertas / nPecas) * 100);
 					//iniciaSegundaParte();
-				}
-				//setChildIndex(feedbackScreen, numChildren - 1);
-			}else {
-				var acertosP2:int = 0;
-				var nFundos:int = 0;
-				
-				for (i = 0; i < numChildren; i++) 
-				{
-					child = getChildAt(i);
-					if (child is Fundo) {
-						nFundos++;
-						var posFundo:Point = new Point(child.x, child.y);
-						if(Fundo(child).espaco.hitTestPoint(posFundo.x, posFundo.y)){
-							acertosP2++;
+					
+					if (currentScore < 99) {
+						var comp:Boolean = false;
+						if (tentativaAtual == maxTentativas) {
+							feedbackScreen.setText("Ops!... Você precisa iniciar uma nova tentativa para refazer o exercício.");
+							comp = true;
+						}
+						else feedbackScreen.setText("Ops!... Reveja as relações de predação. Você ainda tem " + String(maxTentativas - tentativaAtual) + " tentativa(s).");
+						tentativaAtual++;
+						if (tentativaAtual <= maxTentativas) {
+							entrada.tentativas.text = String(tentativaAtual) + "/" + String(maxTentativas);
+						}
+						if(!completed){
+							score = currentScore;
+							completed = comp;
+							saveStatus();
+							commit();
+						}
+					}else {
+						feedbackScreen.setText("Correto! Agora organize os animais em níveis tróficos (pressione \"terminei\" quando tiver concluído).");
+						iniciaSegundaParte();
+						if(!completed){
+							score = currentScore;
+							completed = false;
+							saveStatus();
+							commit();
 						}
 					}
+					setChildIndex(feedbackScreen, numChildren - 1);
+				}else {
+					var acertosP2:int = 0;
+					var nFundos:int = 0;
+					
+					for (i = 0; i < numChildren; i++) 
+					{
+						child = getChildAt(i);
+						if (child is Fundo) {
+							nFundos++;
+							var posFundo:Point = new Point(child.x, child.y);
+							if(Fundo(child).espaco.hitTestPoint(posFundo.x, posFundo.y)){
+								acertosP2++;
+							}
+						}
+					}
+					
+					var currentScoreP2:int = int((acertosP2 / nFundos) * 100);
+					
+					if (currentScoreP2 < 99) {
+						var comp2:Boolean = false;
+						if (tentativaAtual == maxTentativas) {
+							feedbackScreen.setText("Ops!... Você precisa iniciar uma nova tentativa para refazer o exercício.");
+							comp2 = true;
+						}
+						else feedbackScreen.setText("Ops!... Reveja os níveis tróficos. Você ainda tem " + String(maxTentativas - tentativaAtual) + " tentativa(s).");
+						tentativaAtual++;
+						if (tentativaAtual <= maxTentativas) {
+							entrada.tentativas.text = String(tentativaAtual) + "/" + String(maxTentativas);
+						}
+						if (!completed) {
+							completed = comp2;
+							score = 50 + currentScoreP2 / 2;
+							saveStatus();
+							commit();
+						}
+					}else {
+						feedbackScreen.setText("Correto!");
+						if(!completed){
+							completed = true;
+							score = 50 + currentScoreP2 / 2;
+							saveStatus();
+							commit();
+						}
+					}
+					
 				}
-				
-				var currentScoreP2:int = int((acertosP2 / nFundos) * 100);
+			}else {
+				feedbackScreen.setText("Número de tentativas excedidas.\nVocê precisa iniciar uma nova tentativa para refazer o exercício.");
 			}
 			setChildIndex(bordaAtividade, numChildren - 1);
 		}
 		
 		private function iniciaSegundaParte():void 
 		{
-			state = "Parte 2";
+			state = "Parte 2:";
 			parte.text = state;
+			parte2.text = "Organize os animais em níveis tróficos.";
+			tentativaAtual = 1;
+			entrada.tentativas.text = "1/3";
 			
 			for (var i:int = 0; i < numChildren; i++) 
 			{
 				var child:DisplayObject = getChildAt(i);
 				if (child is Peca) {
-					Peca(child).x = Peca(child).fundo[0].x;
-					Peca(child).y = Peca(child).fundo[0].y;
-					Peca(child).currentFundo = Peca(child).fundo[0];
-					Fundo(Peca(child).currentFundo).currentPeca = Peca(child);
+					//Peca(child).x = Peca(child).fundo[0].x;
+					//Peca(child).y = Peca(child).fundo[0].y;
+					//Peca(child).currentFundo = Peca(child).fundo[0];
+					//Fundo(Peca(child).currentFundo).currentPeca = Peca(child);
 					
 					Fundo(Peca(child).currentFundo).disponivel = true;
 					Peca(child).mouseEnabled = true;
 					Peca(child).removeListeners();
 					Peca(child).buttonMode = true;
+					Peca(child).bkg.gotoAndStop(STATIC);
 				}
 			}
 			
 			fundoPecasStage.visible = false;
 			fundoSegundaParte.visible = true;
-			stage.addEventListener(MouseEvent.MOUSE_DOWN, initDragFundo);
+			saveStatus();
 		}
 		
 		private var fundoDragging:Fundo;
@@ -397,14 +472,16 @@
 		private function initDragFundo(e:MouseEvent):void 
 		{
 			posClick = new Point(stage.mouseX, stage.mouseY);
-			fundoDragging = getFundo(posClick);
+			fundoDragging = getFundo(posClick, true);
 			
-			if (fundoDragging != null) {
-				stage.addEventListener(MouseEvent.MOUSE_MOVE, movingFundo);
-				stage.addEventListener(MouseEvent.MOUSE_UP, stopDraggingFundo);
-				
-				fundoClickPos.x = fundoDragging.mouseX;
-				fundoClickPos.y = fundoDragging.mouseY;
+			if(state == "Parte 2:"){
+				if (fundoDragging != null) {
+					stage.addEventListener(MouseEvent.MOUSE_MOVE, movingFundo);
+					stage.addEventListener(MouseEvent.MOUSE_UP, stopDraggingFundo);
+					
+					fundoClickPos.x = fundoDragging.mouseX;
+					fundoClickPos.y = fundoDragging.mouseY;
+				}
 			}
 			criaConexoes();
 		}
@@ -432,6 +509,7 @@
 			//fundoDragging = null;
 			
 			criaConexoes();
+			saveStatus();
 		}
 		
 		private function verificaFinaliza():void 
@@ -479,8 +557,8 @@
 					Peca(child).ghost = ghostObj;
 					Peca(child).addListeners();
 					Peca(child).inicialPosition = new Point(child.x, child.y);
-					child.addEventListener(Event.CHANGE, verifyPosition);
-					child.addEventListener(Event.ACTIVATE, verifyForFilter);
+					child.addEventListener("fimArraste", verifyPosition);
+					child.addEventListener("inicioArraste", verifyForFilter);
 					Peca(child).buttonMode = true;
 					Peca(child).gotoAndStop(1);
 					
@@ -490,6 +568,7 @@
 						fundoPeca.currentPeca = Peca(child);
 						Peca(child).mouseEnabled = false;
 						fundoPeca.disponivel = false;
+						Peca(child).bkg.gotoAndStop(STATIC);
 					}
 				}else if (child is Fundo) {
 					Fundo(child).setPosition(child.x, child.y);
@@ -535,7 +614,8 @@
 		}
 		
 		private var pecaDragging:Peca;
-		private var fundoFilter:GlowFilter = new GlowFilter(0xFF0000, 1, 20, 20, 1, 2, true, true);
+		private var fundoFilter:GlowFilter = new GlowFilter(0xFF8080, 1, 20, 20, 1, 2, true, true);
+		//private var fundoFilter:GlowFilter = new GlowFilter(0xFF8080);
 		private var fundoWGlow:MovieClip;
 		private function verifyForFilter(e:Event):void 
 		{
@@ -585,8 +665,14 @@
 					fundoWGlow = null;
 				}
 			}
+			
+			fundoDragging = fundoUnder;
+			criaConexoes();
 		}
 		
+		private static const WAITING:int = 1;
+		private static const DROPED:int = 2;
+		private static const STATIC:int = 3;
 		private function verifyPosition(e:Event):void 
 		{
 			stage.removeEventListener(MouseEvent.MOUSE_MOVE, verifying);
@@ -611,6 +697,7 @@
 					//tweenY = new Tween(peca, "y", None.easeNone, peca.y, fundoDrop.y, 0.5, true);
 					peca.x = fundoDrop.x;
 					peca.y = fundoDrop.y;
+					peca.bkg.gotoAndStop(DROPED);
 				}else {
 					if(peca.currentFundo != null){
 						var pecaFundo:Peca = Peca(fundoDrop.currentPeca);
@@ -634,6 +721,7 @@
 						//tweenY = new Tween(peca, "y", None.easeNone, peca.position.y, fundoDrop.y, tweenTime, true);
 						peca.x = fundoDrop.x;
 						peca.y = fundoDrop.y;
+						peca.bkg.gotoAndStop(DROPED);
 						
 						tweenX2 = new Tween(pecaFundo, "x", None.easeNone, pecaFundo.x, pecaFundo.inicialPosition.x, tweenTime, true);
 						tweenY2 = new Tween(pecaFundo, "y", None.easeNone, pecaFundo.y, pecaFundo.inicialPosition.y, tweenTime, true);
@@ -642,6 +730,7 @@
 						fundoDrop.currentPeca = peca;
 						
 						pecaFundo.currentFundo = null;
+						pecaFundo.bkg.gotoAndStop(WAITING);
 					}
 				}
 			}else {
@@ -651,19 +740,22 @@
 				}
 				tweenX = new Tween(peca, "x", None.easeNone, peca.x, peca.inicialPosition.x, tweenTime, true);
 				tweenY = new Tween(peca, "y", None.easeNone, peca.y, peca.inicialPosition.y, tweenTime, true);
+				peca.bkg.gotoAndStop(WAITING);
 			}
 			
 			verificaFinaliza();
+			setTimeout(saveStatus, (tweenTime + 0.1) * 1000);
 		}
 		
-		private function getFundo(position:Point):Fundo 
+		private function getFundo(position:Point, semDisponivel:Boolean = false):Fundo 
 		{
 			for (var i:int = 0; i < numChildren; i++)
 			{
 				var child:DisplayObject = getChildAt(i);
 				if (child is Fundo) {
 					if (child.hitTestPoint(position.x, position.y)) {
-						if(Fundo(child).disponivel) return Fundo(child);
+						if (Fundo(child).disponivel) return Fundo(child);
+						else if(semDisponivel) return Fundo(child);
 					}
 				}
 			}
@@ -757,6 +849,209 @@
 			}else if (child is Peca24) {
 				child.fundo = [fundo24];
 				child.nome = "peca24";
+			}
+		}
+		
+		
+		//---------------- Tutorial -----------------------
+		
+		private var balao:CaixaTexto;
+		private var pointsTuto:Array;
+		private var tutoBaloonPos:Array;
+		private var tutoPos:int;
+		private var tutoSequence:Array = ["Esta atividade interativa tem duas partes.", 
+										  "Nesta primeira parte você deve arrastar os animais...",
+										  "... para as caixas corretas...",
+										  "... conforme descrito nas orientações.",
+										  "Clique numa caixa para destacar as relações dela.",
+										  "Quando você tiver concluído, pressione \"terminei\" (você tem 3 chances para acertar e prosseguir).",
+										  "Esta é a parte dois. Agora você deve organizar os animais em níveis tróficos.",
+										  "Pressiona \"terminei\" quando tiver concluído."];
+		
+		public function iniciaTutorial(e:MouseEvent = null):void 
+		{
+			tutoPos = 0;
+			if(balao == null){
+				balao = new CaixaTexto(true);
+				addChild(balao);
+				balao.visible = false;
+				
+				pointsTuto = 	[new Point(320, 440),
+								new Point(230 , 130),
+								new Point(650 , 500),
+								new Point(230 , 130),
+								new Point(650 , 500),
+								new Point(230 , 130),
+								new Point(650 , 500),
+								new Point(650, 500)];
+								
+				tutoBaloonPos = [[CaixaTexto.BOTTON, CaixaTexto.CENTER],
+								[CaixaTexto.BOTTON, CaixaTexto.CENTER],
+								[CaixaTexto.RIGHT, CaixaTexto.FIRST],
+								[CaixaTexto.BOTTON, CaixaTexto.CENTER],
+								[CaixaTexto.RIGHT, CaixaTexto.FIRST],
+								[CaixaTexto.BOTTON, CaixaTexto.CENTER],
+								[CaixaTexto.RIGHT, CaixaTexto.FIRST],
+								[CaixaTexto.TOP, CaixaTexto.CENTER]];
+			}
+			balao.removeEventListener(Event.CLOSE, closeBalao);
+			
+			balao.setText(tutoSequence[tutoPos], tutoBaloonPos[tutoPos][0], tutoBaloonPos[tutoPos][1]);
+			balao.setPosition(pointsTuto[tutoPos].x, pointsTuto[tutoPos].y);
+			balao.addEventListener(Event.CLOSE, closeBalao);
+			balao.visible = true;
+		}
+		
+		private function closeBalao(e:Event):void 
+		{
+			tutoPos++;
+			if (tutoPos >= tutoSequence.length) {
+				balao.removeEventListener(Event.CLOSE, closeBalao);
+				balao.visible = false;
+			}else {
+				balao.setText(tutoSequence[tutoPos], tutoBaloonPos[tutoPos][0], tutoBaloonPos[tutoPos][1]);
+				balao.setPosition(pointsTuto[tutoPos].x, pointsTuto[tutoPos].y);
+			}
+		}
+		
+		
+		/*------------------------------------------------------------------------------------------------*/
+		//SCORM:
+		
+		private const PING_INTERVAL:Number = 5 * 60 * 1000; // 5 minutos
+		private var completed:Boolean;
+		private var scorm:SCORM;
+		private var scormExercise:int;
+		private var connected:Boolean;
+		private var score:int = 0;
+		private var pingTimer:Timer;
+		private var mementoSerialized:String = "";
+		
+		/**
+		 * @private
+		 * Inicia a conexão com o LMS.
+		 */
+		private function initLMSConnection () : void
+		{
+			completed = false;
+			connected = false;
+			scorm = new SCORM();
+			
+			pingTimer = new Timer(PING_INTERVAL);
+			pingTimer.addEventListener(TimerEvent.TIMER, pingLMS);
+			
+			connected = scorm.connect();
+			
+			if (connected) {
+				// Verifica se a AI já foi concluída.
+				var status:String = scorm.get("cmi.completion_status");	
+				mementoSerialized = scorm.get("cmi.suspend_data");
+				var stringScore:String = scorm.get("cmi.score.raw");
+			 
+				switch(status)
+				{
+					// Primeiro acesso à AI
+					case "not attempted":
+					case "unknown":
+					default:
+						completed = false;
+						break;
+					
+					// Continuando a AI...
+					case "incomplete":
+						completed = false;
+						break;
+					
+					// A AI já foi completada.
+					case "completed":
+						completed = true;
+						//setMessage("ATENÇÃO: esta Atividade Interativa já foi completada. Você pode refazê-la quantas vezes quiser, mas não valerá nota.");
+						break;
+				}
+				
+				//unmarshalObjects(mementoSerialized);
+				scormExercise = 1;
+				score = Number(stringScore.replace(",", "."));
+				
+				var success:Boolean = scorm.set("cmi.score.min", "0");
+				if (success) success = scorm.set("cmi.score.max", "100");
+				
+				if (success)
+				{
+					scorm.save();
+					pingTimer.start();
+				}
+				else
+				{
+					//trace("Falha ao enviar dados para o LMS.");
+					connected = false;
+				}
+			}
+			else
+			{
+				trace("Esta Atividade Interativa não está conectada a um LMS: seu aproveitamento nela NÃO será salvo.");
+				mementoSerialized = ExternalInterface.call("getLocalStorageString");
+			}
+			
+			//reset();
+		}
+		
+		/**
+		 * @private
+		 * Salva cmi.score.raw, cmi.location e cmi.completion_status no LMS
+		 */ 
+		private function commit()
+		{
+			if (connected)
+			{
+				// Salva no LMS a nota do aluno.
+				var success:Boolean = scorm.set("cmi.score.raw", score.toString());
+
+				// Notifica o LMS que esta atividade foi concluída.
+				success = scorm.set("cmi.completion_status", (completed ? "completed" : "incomplete"));
+
+				// Salva no LMS o exercício que deve ser exibido quando a AI for acessada novamente.
+				success = scorm.set("cmi.location", scormExercise.toString());
+				
+				// Salva no LMS a string que representa a situação atual da AI para ser recuperada posteriormente.
+				//mementoSerialized = marshalObjects();
+				success = scorm.set("cmi.suspend_data", mementoSerialized.toString());
+
+				if (success)
+				{
+					scorm.save();
+				}
+				else
+				{
+					pingTimer.stop();
+					//setMessage("Falha na conexão com o LMS.");
+					connected = false;
+				}
+			}else { //LocalStorage
+				ExternalInterface.call("save2LS", mementoSerialized);
+			}
+		}
+		
+		/**
+		 * @private
+		 * Mantém a conexão com LMS ativa, atualizando a variável cmi.session_time
+		 */
+		private function pingLMS (event:TimerEvent)
+		{
+			//scorm.get("cmi.completion_status");
+			commit();
+		}
+		
+		private function saveStatus():void
+		{
+			if (ExternalInterface.available) {
+				saveStatusForRecovery();
+				if (connected) {
+					scorm.set("cmi.suspend_data", mementoSerialized);
+					scorm.save();
+				}else {//LocalStorage
+					ExternalInterface.call("save2LS", mementoSerialized);
+				}
 			}
 		}
 		

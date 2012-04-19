@@ -944,6 +944,7 @@
 			
 			if (connected) {
 				// Verifica se a AI já foi concluída.
+				scorm.set("cmi.exit", "suspend");
 				var status:String = scorm.get("cmi.completion_status");	
 				mementoSerialized = scorm.get("cmi.suspend_data");
 				var stringScore:String = scorm.get("cmi.score.raw");

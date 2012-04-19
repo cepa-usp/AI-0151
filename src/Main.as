@@ -68,6 +68,8 @@
 			verificaFinaliza();
 			criaConexoes();
 			stage.addEventListener(MouseEvent.MOUSE_DOWN, initDragFundo);
+			
+			iniciaTutorial();
 		}
 		
 		private function saveStatusForRecovery(e:MouseEvent = null):void
@@ -300,7 +302,7 @@
 						Peca(child).currentFundo = null;
 						Peca(child).bkg.gotoAndStop(WAITING);
 						
-						var fundoPeca:Fundo = getFundo(new Point(child.x, child.y));
+						var fundoPeca:Fundo = getFundo(new Point(child.x, child.y), true);
 						if (fundoPeca != null) {
 							Peca(child).currentFundo = fundoPeca;
 							fundoPeca.currentPeca = Peca(child);
@@ -464,6 +466,8 @@
 			fundoPecasStage.visible = false;
 			fundoSegundaParte.visible = true;
 			saveStatus();
+			
+			iniciaTutorial();
 		}
 		
 		private var fundoDragging:Fundo;
@@ -856,43 +860,56 @@
 		//---------------- Tutorial -----------------------
 		
 		private var balao:CaixaTexto;
-		private var pointsTuto:Array;
-		private var tutoBaloonPos:Array;
 		private var tutoPos:int;
-		private var tutoSequence:Array = ["Esta atividade interativa tem duas partes.", 
-										  "Nesta primeira parte você deve arrastar os animais...",
-										  "... para as caixas corretas...",
-										  "... conforme descrito nas orientações.",
-										  "Clique numa caixa para destacar as relações dela.",
-										  "Quando você tiver concluído, pressione \"terminei\" (você tem 3 chances para acertar e prosseguir).",
-										  "Esta é a parte dois. Agora você deve organizar os animais em níveis tróficos.",
-										  "Pressiona \"terminei\" quando tiver concluído."];
+		private var pointsTuto:Array;
+		private var tutoSequence:Array = [
+			"Esta atividade interativa tem duas partes.", 
+			"Nesta primeira parte você deve arrastar os animais...",
+			"... para as caixas corretas...",
+			"... conforme descrito nas orientações.",
+			"Clique numa caixa para destacar as relações dela.",
+			"Quando você tiver concluído, pressione \"terminei\" (você tem 3 chances para acertar e prosseguir)."
+		];
+										  
+		private var tutoSequence2:Array = [
+			"Esta é a parte dois. Agora você deve organizar os animais em níveis tróficos.",
+			"Pressiona \"terminei\" quando tiver concluído."
+		];
+		
+		private var tutoBaloonPos:Array = [
+			[CaixaTexto.TOP, CaixaTexto.CENTER],
+			[CaixaTexto.BOTTON, CaixaTexto.CENTER],
+			[CaixaTexto.BOTTON, CaixaTexto.FIRST],
+			[CaixaTexto.RIGHT, CaixaTexto.CENTER],
+			[CaixaTexto.RIGHT, CaixaTexto.FIRST],
+			[CaixaTexto.TOP, CaixaTexto.CENTER],
+			[CaixaTexto.TOP, CaixaTexto.CENTER],
+			[CaixaTexto.TOP, CaixaTexto.CENTER]
+		];
 		
 		public function iniciaTutorial(e:MouseEvent = null):void 
 		{
-			tutoPos = 0;
+			if (state == "Parte 2:") {
+				tutoPos = tutoSequence.length;
+			}else {
+				tutoPos = 0;
+			}
+			
 			if(balao == null){
 				balao = new CaixaTexto(true);
 				addChild(balao);
 				balao.visible = false;
 				
-				pointsTuto = 	[new Point(320, 440),
-								new Point(230 , 130),
-								new Point(650 , 500),
-								new Point(230 , 130),
-								new Point(650 , 500),
-								new Point(230 , 130),
-								new Point(650 , 500),
-								new Point(650, 500)];
-								
-				tutoBaloonPos = [[CaixaTexto.BOTTON, CaixaTexto.CENTER],
-								[CaixaTexto.BOTTON, CaixaTexto.CENTER],
-								[CaixaTexto.RIGHT, CaixaTexto.FIRST],
-								[CaixaTexto.BOTTON, CaixaTexto.CENTER],
-								[CaixaTexto.RIGHT, CaixaTexto.FIRST],
-								[CaixaTexto.BOTTON, CaixaTexto.CENTER],
-								[CaixaTexto.RIGHT, CaixaTexto.FIRST],
-								[CaixaTexto.TOP, CaixaTexto.CENTER]];
+				pointsTuto = [
+					new Point(parte.x + parte.width / 2, parte.y + parte.height),
+					new Point(330 , 485),
+					new Point(282 , 295),
+					new Point(650 , 498),
+					new Point(330 , 252),
+					new Point(125 , 55),
+					new Point(parte.x + parte.width / 2, parte.y + parte.height),
+					new Point(125 , 55)
+				];
 			}
 			balao.removeEventListener(Event.CLOSE, closeBalao);
 			
@@ -905,12 +922,22 @@
 		private function closeBalao(e:Event):void 
 		{
 			tutoPos++;
-			if (tutoPos >= tutoSequence.length) {
-				balao.removeEventListener(Event.CLOSE, closeBalao);
-				balao.visible = false;
+			if(state == "Parte 1:"){
+				if (tutoPos >= tutoSequence.length) {
+					balao.removeEventListener(Event.CLOSE, closeBalao);
+					balao.visible = false;
+				}else {
+					balao.setText(tutoSequence[tutoPos], tutoBaloonPos[tutoPos][0], tutoBaloonPos[tutoPos][1]);
+					balao.setPosition(pointsTuto[tutoPos].x, pointsTuto[tutoPos].y);
+				}
 			}else {
-				balao.setText(tutoSequence[tutoPos], tutoBaloonPos[tutoPos][0], tutoBaloonPos[tutoPos][1]);
-				balao.setPosition(pointsTuto[tutoPos].x, pointsTuto[tutoPos].y);
+				if (tutoPos >= tutoSequence2.length) {
+					balao.removeEventListener(Event.CLOSE, closeBalao);
+					balao.visible = false;
+				}else {
+					balao.setText(tutoSequence[tutoPos], tutoBaloonPos[tutoPos][0], tutoBaloonPos[tutoPos][1]);
+					balao.setPosition(pointsTuto[tutoPos].x, pointsTuto[tutoPos].y);
+				}
 			}
 		}
 		
@@ -944,6 +971,7 @@
 			
 			if (connected) {
 				// Verifica se a AI já foi concluída.
+				scorm.set("cmi.exit", "suspend");
 				var status:String = scorm.get("cmi.completion_status");	
 				mementoSerialized = scorm.get("cmi.suspend_data");
 				var stringScore:String = scorm.get("cmi.score.raw");

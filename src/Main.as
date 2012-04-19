@@ -80,6 +80,7 @@
 			status.tentativas = tentativaAtual;
 			status.pecas = new Object();
 			status.fundos = new Object();
+			status.checked = orientacoesScreen.saveStatus();
 			
 			for (var i:int = 0; i < numChildren; i++)
 			{
@@ -130,6 +131,8 @@
 				iniciaSegundaParte();
 				criaConexoes();
 			}
+			
+			orientacoesScreen.setStatus(status.checked);
 			
 			tentativaAtual = status.tentativas;
 			entrada.tentativas.text = String(tentativaAtual) + "/" + String(maxTentativas);
@@ -332,6 +335,7 @@
 		private function addListeners():void 
 		{
 			entrada.okBtn.addEventListener(MouseEvent.CLICK, finalizaExec);
+			orientacoesScreen.addEventListener("clicado", saveStatus);
 		}
 		
 		private function finalizaExec(e:MouseEvent):void 
@@ -1069,7 +1073,7 @@
 			commit();
 		}
 		
-		private function saveStatus():void
+		private function saveStatus(e:Event = null):void
 		{
 			if (ExternalInterface.available) {
 				saveStatusForRecovery();

@@ -51,7 +51,7 @@
 			this.scrollRect = new Rectangle(0, 0, 700, 600);
 			
 			fundoSegundaParte.visible = false;
-			entrada.tentativas.text = String(tentativaAtual) + "/" + String(maxTentativas);
+			entrada.tentativas.text = String(tentativaAtual) + " de " + String(maxTentativas);
 			
 			adicionaListeners();
 			addListeners();
@@ -136,7 +136,7 @@
 		}
 		
 		private var connections:Array = [
-			[13, 1], [24, 1], [15, 1], [2, 1], [23, 1], [6, 1],
+			[13, 1], [24, 1], [2, 1], [23, 1], [6, 1], [5, 1],
 			[3, 2],
 			[5, 4], [2, 4],
 			[3, 5],
@@ -332,7 +332,6 @@
 		private function addListeners():void 
 		{
 			entrada.okBtn.addEventListener(MouseEvent.CLICK, finalizaExec);
-			entrada.okBtn.buttonMode = true;
 		}
 		
 		private function finalizaExec(e:MouseEvent):void 
@@ -367,7 +366,7 @@
 						else feedbackScreen.setText("Ops!... Reveja as relações de predação. Você ainda tem " + String(maxTentativas - tentativaAtual) + " tentativa(s).");
 						tentativaAtual++;
 						if (tentativaAtual <= maxTentativas) {
-							entrada.tentativas.text = String(tentativaAtual) + "/" + String(maxTentativas);
+							entrada.tentativas.text = String(tentativaAtual) + " de " + String(maxTentativas);
 						}
 						if(!completed){
 							score = currentScore;
@@ -413,7 +412,7 @@
 						else feedbackScreen.setText("Ops!... Reveja os níveis tróficos. Você ainda tem " + String(maxTentativas - tentativaAtual) + " tentativa(s).");
 						tentativaAtual++;
 						if (tentativaAtual <= maxTentativas) {
-							entrada.tentativas.text = String(tentativaAtual) + "/" + String(maxTentativas);
+							entrada.tentativas.text = String(tentativaAtual) + " de " + String(maxTentativas);
 						}
 						if (!completed) {
 							completed = comp2;
@@ -444,7 +443,7 @@
 			parte.text = state;
 			parte2.text = "Organize os animais em níveis tróficos.";
 			tentativaAtual = 1;
-			entrada.tentativas.text = "1/3";
+			entrada.tentativas.text = "1 de 3";
 			
 			for (var i:int = 0; i < numChildren; i++) 
 			{

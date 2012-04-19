@@ -876,14 +876,14 @@
 		];
 		
 		private var tutoBaloonPos:Array = [
-			[CaixaTexto.TOP, CaixaTexto.CENTER],
+			[CaixaTexto.TOP, CaixaTexto.FIRST],
 			[CaixaTexto.BOTTON, CaixaTexto.CENTER],
 			[CaixaTexto.BOTTON, CaixaTexto.FIRST],
 			[CaixaTexto.RIGHT, CaixaTexto.CENTER],
 			[CaixaTexto.RIGHT, CaixaTexto.FIRST],
-			[CaixaTexto.TOP, CaixaTexto.CENTER],
-			[CaixaTexto.TOP, CaixaTexto.CENTER],
-			[CaixaTexto.TOP, CaixaTexto.CENTER]
+			[CaixaTexto.LEFT, CaixaTexto.FIRST],
+			[CaixaTexto.TOP, CaixaTexto.FIRST],
+			[CaixaTexto.LEFT, CaixaTexto.FIRST]
 		];
 		
 		public function iniciaTutorial(e:MouseEvent = null):void 
@@ -904,10 +904,10 @@
 					new Point(330 , 485),
 					new Point(282 , 295),
 					new Point(650 , 498),
-					new Point(330 , 252),
-					new Point(125 , 55),
+					new Point(315 , 233),
+					new Point(100 , 115),
 					new Point(parte.x + parte.width / 2, parte.y + parte.height),
-					new Point(125 , 55)
+					new Point(100 , 115)
 				];
 			}
 			balao.removeEventListener(Event.CLOSE, closeBalao);

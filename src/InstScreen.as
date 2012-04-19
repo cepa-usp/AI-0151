@@ -25,27 +25,31 @@ package
 			this.x = stage.stageWidth / 2;
 			this.y = stage.stageHeight / 2;
 			
-			this.gotoAndStop("END");
+			//this.gotoAndStop("END");
+			this.visible = false;
 			
-			this.addEventListener(MouseEvent.CLICK, closeScreen);
+			//this.addEventListener(MouseEvent.CLICK, closeScreen);
+			closeButton.addEventListener(MouseEvent.CLICK, closeScreen, false, 0, true);
 			stage.addEventListener(KeyboardEvent.KEY_UP, escCloseScreen);
 		}
 		
 		private function escCloseScreen(e:KeyboardEvent):void 
 		{
 			if (e.keyCode ==  Keyboard.ESCAPE) {
-				if(this.currentFrame == 1) this.play();
+				if (this.currentFrame == 1) closeScreen();//this.play();
 			}
 		}
 		
-		private function closeScreen(e:MouseEvent):void 
+		private function closeScreen(e:MouseEvent = null):void 
 		{
-			this.play();
+			//this.play();
+			this.visible = false;
 		}
 		
 		public function openScreen():void
 		{
-			this.gotoAndStop("BEGIN");
+			//this.gotoAndStop("BEGIN");
+			this.visible = true;
 		}
 		
 	}

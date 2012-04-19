@@ -892,11 +892,7 @@
 		
 		public function iniciaTutorial(e:MouseEvent = null):void 
 		{
-			if (state == "Parte 2:") {
-				tutoPos = tutoSequence.length;
-			}else {
-				tutoPos = 0;
-			}
+			tutoPos = 0;
 			
 			if(balao == null){
 				balao = new CaixaTexto(true);
@@ -916,8 +912,14 @@
 			}
 			balao.removeEventListener(Event.CLOSE, closeBalao);
 			
-			balao.setText(tutoSequence[tutoPos], tutoBaloonPos[tutoPos][0], tutoBaloonPos[tutoPos][1]);
-			balao.setPosition(pointsTuto[tutoPos].x, pointsTuto[tutoPos].y);
+			if (state == "Parte 1:") {
+				balao.setText(tutoSequence[tutoPos], tutoBaloonPos[tutoPos][0], tutoBaloonPos[tutoPos][1]);
+				balao.setPosition(pointsTuto[tutoPos].x, pointsTuto[tutoPos].y);
+			}else {
+				balao.setText(tutoSequence2[tutoPos], tutoBaloonPos[tutoPos + tutoSequence.length][0], tutoBaloonPos[tutoPos + tutoSequence.length][1]);
+				balao.setPosition(pointsTuto[tutoPos + tutoSequence.length].x, pointsTuto[tutoPos + tutoSequence.length].y);
+			}
+			
 			balao.addEventListener(Event.CLOSE, closeBalao);
 			balao.visible = true;
 		}
@@ -938,8 +940,8 @@
 					balao.removeEventListener(Event.CLOSE, closeBalao);
 					balao.visible = false;
 				}else {
-					balao.setText(tutoSequence[tutoPos], tutoBaloonPos[tutoPos][0], tutoBaloonPos[tutoPos][1]);
-					balao.setPosition(pointsTuto[tutoPos].x, pointsTuto[tutoPos].y);
+					balao.setText(tutoSequence2[tutoPos], tutoBaloonPos[tutoPos + tutoSequence.length][0], tutoBaloonPos[tutoPos + tutoSequence.length][1]);
+					balao.setPosition(pointsTuto[tutoPos + tutoSequence.length].x, pointsTuto[tutoPos + tutoSequence.length].y);
 				}
 			}
 		}

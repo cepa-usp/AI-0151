@@ -69,7 +69,8 @@
 			criaConexoes();
 			stage.addEventListener(MouseEvent.MOUSE_DOWN, initDragFundo);
 			
-			iniciaTutorial();
+			if (!completed) iniciaTutorial();
+			else locakAll();
 		}
 		
 		private function saveStatusForRecovery(e:MouseEvent = null):void
@@ -105,6 +106,8 @@
 		
 		private function recoverStatus(memento:String):void
 		{
+			if (memento == "") return;
+			
 			var status:Object = JSON.decode(memento);
 			
 			state = status.fase;
@@ -129,13 +132,14 @@
 			
 			if (state == "Parte 2:") {
 				iniciaSegundaParte();
-				criaConexoes();
+				//criaConexoes();
 			}
 			
 			orientacoesScreen.setStatus(status.checked);
 			
 			tentativaAtual = status.tentativas;
-			entrada.tentativas.text = String(tentativaAtual) + "/" + String(maxTentativas);
+			if (tentativaAtual > maxTentativas) entrada.tentativas.text = String(maxTentativas) + " de " + String(maxTentativas);
+			else entrada.tentativas.text = String(tentativaAtual) + " de " + String(maxTentativas);
 		}
 		
 		private var connections:Array = [
@@ -363,11 +367,17 @@
 					
 					if (currentScore < 99) {
 						var comp:Boolean = false;
+						
 						if (tentativaAtual == maxTentativas) {
 							feedbackScreen.setText("Ops!... Você precisa iniciar uma nova tentativa para refazer o exercício.");
 							comp = true;
 						}
-						else feedbackScreen.setText("Ops!... Reveja as relações de predação. Você ainda tem " + String(maxTentativas - tentativaAtual) + " tentativa(s).");
+						else {
+							feedbackScreen.setText("Ops!... Reveja as relações de predação. Você ainda tem " + String(maxTentativas - tentativaAtual) + " tentativa(s).");
+							if (tentativaAtual == 1) {
+								feedbackScreen.addEventListener(Event.CLOSE, iniciaTutorialErro);
+							}
+						}
 						tentativaAtual++;
 						if (tentativaAtual <= maxTentativas) {
 							entrada.tentativas.text = String(tentativaAtual) + " de " + String(maxTentativas);
@@ -431,6 +441,7 @@
 							score = 50 + currentScoreP2 / 2;
 							saveStatus();
 							commit();
+							locakAll();
 						}
 					}
 					
@@ -439,6 +450,25 @@
 				feedbackScreen.setText("Número de tentativas excedidas.\nVocê precisa iniciar uma nova tentativa para refazer o exercício.");
 			}
 			setChildIndex(bordaAtividade, numChildren - 1);
+		}
+		
+		private function locakAll():void 
+		{
+			for (var i:int = 0; i < numChildren; i++) 
+			{
+				var child:DisplayObject = getChildAt(i);
+				if (child is Peca) {
+					Peca(child).mouseEnabled = false;
+				}else if (child is Fundo) {
+					Fundo(child).mouseEnabled = false;
+				}
+			}
+			
+			entrada.okBtn.mouseEnabled = false;
+			entrada.okBtn.alpha = 0.5;
+			
+			botoes.resetButton.mouseEnabled = false;
+			botoes.resetButton.alpha = 0.5;
 		}
 		
 		private function iniciaSegundaParte():void 
@@ -468,7 +498,9 @@
 			
 			fundoPecasStage.visible = false;
 			fundoSegundaParte.visible = true;
-			saveStatus();
+			//saveStatus();
+			
+			setTimeout(saveStatus, 500);
 			
 			iniciaTutorial();
 		}
@@ -876,6 +908,8 @@
 										  
 		private var tutoSequence2:Array = [
 			"Esta é a parte dois. Agora você deve organizar os animais em níveis tróficos.",
+			"Esta faixa representa o nível dos produtores.",
+			"Esta faixa representa o nível dos consumidores primários, e assim por diante.",
 			"Pressiona \"terminei\" quando tiver concluído."
 		];
 		
@@ -887,6 +921,8 @@
 			[CaixaTexto.RIGHT, CaixaTexto.FIRST],
 			[CaixaTexto.LEFT, CaixaTexto.FIRST],
 			[CaixaTexto.TOP, CaixaTexto.FIRST],
+			[CaixaTexto.LEFT, CaixaTexto.LAST],
+			[CaixaTexto.LEFT, CaixaTexto.FIRST],
 			[CaixaTexto.LEFT, CaixaTexto.FIRST]
 		];
 		
@@ -907,6 +943,8 @@
 					new Point(315 , 233),
 					new Point(100 , 115),
 					new Point(parte.x + parte.width / 2, parte.y + parte.height),
+					new Point(66, 566),
+					new Point(87, 467),
 					new Point(100 , 115)
 				];
 			}
@@ -922,6 +960,23 @@
 			
 			balao.addEventListener(Event.CLOSE, closeBalao);
 			balao.visible = true;
+		}
+		
+		private function iniciaTutorialErro(e:Event = null):void
+		{
+			feedbackScreen.removeEventListener(Event.CLOSE, iniciaTutorialErro);
+			balao.removeEventListener(Event.CLOSE, closeBalao);
+			
+			balao.setText("Pressione reset para remover TODAS as peças.", CaixaTexto.RIGHT, CaixaTexto.CENTER);
+			balao.setPosition(650, 528);
+			
+			balao.addEventListener(Event.CLOSE, closeBalaoErro);
+		}
+		
+		private function closeBalaoErro(e:Event):void 
+		{
+			balao.removeEventListener(Event.CLOSE, closeBalaoErro);
+			balao.visible = false;
 		}
 		
 		private function closeBalao(e:Event):void 

@@ -82,6 +82,7 @@
 			status.pecas = new Object();
 			status.fundos = new Object();
 			status.checked = orientacoesScreen.saveStatus();
+			status.completed = completed;
 			
 			for (var i:int = 0; i < numChildren; i++)
 			{
@@ -110,6 +111,7 @@
 			
 			var status:Object = JSON.decode(memento);
 			
+			completed = status.completed;
 			state = status.fase;
 			parte.text = state;
 			
@@ -466,6 +468,8 @@
 				}
 			}
 			
+			stage.removeEventListener(MouseEvent.MOUSE_DOWN, initDragFundo);
+			
 			entrada.okBtn.mouseEnabled = false;
 			entrada.okBtn.alpha = 0.5;
 			
@@ -504,7 +508,7 @@
 			
 			setTimeout(saveStatus, 500);
 			
-			iniciaTutorial();
+			if(!completed) iniciaTutorial();
 		}
 		
 		private var fundoDragging:Fundo;

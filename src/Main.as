@@ -622,8 +622,8 @@
 		
 		private var espacosFundo:Array = [
 			["fundo1", "fundo6", "fundo7", "fundo11"],
-			["fundo4", "fundo8", "fundo21"],
-			["fundo9", "fundo12", "fundo22"],
+			["fundo8", "fundo21"],
+			["fundo4", "fundo9", "fundo12", "fundo22"],
 			["fundo3", "fundo17", "fundo19"]
 		];
 		private function getEspacoFundo(fundoName:String):MovieClip 
